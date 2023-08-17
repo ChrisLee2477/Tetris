@@ -14,6 +14,7 @@ export type BoardState = {
   board: BoardShape;
   droppingRow: number;
   droppingColumn: number;
+  droppingBlock: Block;
   droppingShape: BlockShape;
 };
 
@@ -25,7 +26,7 @@ export function useTetrisBoard(): [BoardState, Dispatch<Action>] {
       droppingRow: 0,
       droppingColumn: 0,
       droppingBlock: Block.I,
-      droppingShap: SHAPES.I.shape,
+      droppingShape: SHAPES.I.shape,
     },
     (emptyState) => {
       const state = {
@@ -43,8 +44,35 @@ export function getRandomBlock(): Block {
   return blockValues[Math.floor(Math.random() * blockValues.length)] as Block;
 }
 
+export function hasCollosions(
+  board: BlockShape,
+  currentShape: BlockShape,
+  row: number,
+  column: number
+): boolean {
+  let hasCollosion = false;
+  currentShape
+    .filter((shapeRow) => shapeRow.some((isSet) => isSet))
+    .forEach((shapeRow: boolean[], rowIndex: number) => {
+      shapeRow.forEach((isSet: boolean, colIndex: number) => {
+        if (
+          isSet &&
+          (row + rowIndex >= board.length ||
+            column + colIndex >= board[0].length ||
+            column + colIndex < 0 ||
+            board[row + rowIndex][column + colIndex] !== EmptyCell.Empty)
+        ) {
+          hasCollosion = true;
+        }
+      });
+    });
+  return hasCollosion;
+}
+
 type Action = {
   type: "start" | "drop" | "commit" | "move";
+  newBoard?: BlockShape;
+  newBlock?: Block;
 };
 
 function boardReducer(state: BoardState, action: Action): BoardState {
@@ -63,6 +91,13 @@ function boardReducer(state: BoardState, action: Action): BoardState {
       newState.droppingRow++;
       break;
     case "commit":
+      return {
+        board: action.newBoard,
+        droppingRow: 0,
+        droppingColumn: 3,
+        droppingBlock: action.newBlock!,
+        droppingShape: SHAPES[action.newBlock!].shape,
+      };
     case "move":
     default:
       const unhandledType: never = action.type;
